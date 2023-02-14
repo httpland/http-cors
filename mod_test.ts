@@ -1,11 +1,5 @@
-import cors from "./cors.ts";
-import {
-  assert,
-  assertEquals,
-  describe,
-  equalsResponse,
-  it,
-} from "./_dev_deps.ts";
+import cors from "./mod.ts";
+import { assert, describe, equalsResponse, it } from "./_dev_deps.ts";
 
 describe("cors", () => {
   it("should return same response If the request is not CORS request", async () => {
@@ -17,7 +11,7 @@ describe("cors", () => {
       () => init,
     );
 
-    assertEquals(response, init);
+    assert(equalsResponse(response, init));
   });
 
   it("should add access-control-allow-origin header If the request is CORS request", async () => {
@@ -27,7 +21,7 @@ describe("cors", () => {
     const response = await middleware(
       new Request("http://localhost", {
         headers: {
-          "origin": "http://localhost",
+          "origin": "http://api",
         },
       }),
       () => init,
@@ -53,7 +47,7 @@ describe("cors", () => {
       new Request("http://localhost", {
         method: "OPTIONS",
         headers: {
-          "origin": "http://localhost",
+          "origin": "http://api",
           "access-control-request-method": "POST",
           "access-control-request-headers": "content-type",
         },
@@ -68,8 +62,40 @@ describe("cors", () => {
           status: 204,
           headers: {
             "access-control-allow-origin": "*",
-            "access-control-allow-method": "POST",
+            "access-control-allow-methods": "POST",
             "access-control-allow-headers": "content-type",
+          },
+        }),
+      ),
+    );
+  });
+
+  it("should override CORS headers", async () => {
+    const middleware = cors({ maxAge: 100, exposeHeaders: "x-server" });
+
+    const response = await middleware(
+      new Request("http://localhost", {
+        method: "OPTIONS",
+        headers: {
+          "origin": "http://api",
+          "access-control-request-method": "POST",
+          "access-control-request-headers": "content-type",
+        },
+      }),
+      () => new Response("ok"),
+    );
+
+    assert(
+      equalsResponse(
+        response,
+        new Response(null, {
+          status: 204,
+          headers: {
+            "access-control-allow-origin": "*",
+            "access-control-allow-methods": "POST",
+            "access-control-allow-headers": "content-type",
+            "access-control-max-age": "100",
+            "access-control-expose-headers": "x-server",
           },
         }),
       ),
